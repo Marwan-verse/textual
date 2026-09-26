@@ -1,5 +1,3 @@
-import asyncio
-
 try:
     import httpx
 except ImportError:
@@ -23,15 +21,16 @@ class DictionaryApp(App):
 
     async def on_input_changed(self, message: Input.Changed) -> None:
         """A coroutine to handle a text changed message."""
-        if message.value:
-            # Look up the word in the background
-            asyncio.create_task(self.lookup_word(message.value))
-        else:
-            # Clear the results
-            self.query_one("#results", Static).update()
+        self.query_one(Input).run_worker(
+            self.lookup_word(message.value), exclusive=True
+        )
 
     async def lookup_word(self, word: str) -> None:
         """Looks up a word."""
+        if not word:
+            self.query_one("#results", Static).update()
+            return
+
         url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
         async with httpx.AsyncClient() as client:
             results = (await client.get(url)).text
